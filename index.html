@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Fireplace | Ambiance</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .status-badge {
+            position: fixed;
+            top: 1.5rem;
+            left: 1.5rem;
+            color: rgba(255,255,255,0.08);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            z-index: 10;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-badge">Ambient System // FIR-01</div>
+    <canvas id="fireplace"></canvas>
+
+    <script>
+    (() => {
+        const canvas = document.getElementById('fireplace');
+        const ctx = canvas.getContext('2d');
+        let W, H;
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        /* ── Utility ─────────────────────────── */
+        const rand = (min, max) => Math.random() * (max - min) + min;
+        const lerp = (a, b, t) => a + (b - a) * t;
+
+        /* ── Hearth Geometry ─────────────────── */
+        function getHearth() {
+            const floorY = H * 0.82;
+            const cx = W * 0.5;
+            const fw = Math.min(W * 0.45, 600);  // fire width
+            return { floorY, cx, fw };
+        }
+
+        /* ── Flame Particles ─────────────────── */
+        const flames = [];
+        const MAX_FLAMES = 180;
+
+        function spawnFlame() {
+            const { floorY, cx, fw } = getHearth();
+            const spread = fw * 0.35;
+            flames.push({
+                x: cx + rand(-spread, spread),
+                y: floorY - rand(0, 15),
+                vx: rand(-0.4, 0.4),
+                vy: rand(-2.5, -5.5),
+                r: rand(8, 28),
+                life: 1,
+                decay: rand(0.008, 0.025),
+                turbulence: rand(0.3, 1.2),
+                turbPhase: rand(0, Math.PI * 2),
+            });
+        }
+
+        function updateFlames() {
+            for (let i = flames.length - 1; i >= 0; i--) {
+                const f = flames[i];
+                f.turbPhase += 0.05;
+                f.x += f.vx + Math.sin(f.turbPhase) * f.turbulence;
+                f.y += f.vy;
+                f.vy *= 0.995;
+                f.r *= 0.993;
+                f.life -= f.decay;
+                if (f.life <= 0 || f.r < 1) flames.splice(i, 1);
+            }
+        }
+
+        function drawFlames() {
+            for (const f of flames) {
+                const t = 1 - f.life;          // 0 = fresh (base), 1 = dying (tip)
+                let r, g, b, a;
+
+                if (t < 0.15) {
+                    // Base: white-yellow core
+                    r = 255; g = lerp(240, 200, t / 0.15); b = lerp(180, 60, t / 0.15);
+                    a = f.life * 0.95;
+                } else if (t < 0.45) {
+                    // Mid: bright orange
+                    const p = (t - 0.15) / 0.3;
+                    r = 255; g = lerp(200, 100, p); b = lerp(60, 10, p);
+                    a = f.life * 0.85;
+                } else if (t < 0.75) {
+                    // Upper: deep orange-red
+                    const p = (t - 0.45) / 0.3;
+                    r = lerp(255, 180, p); g = lerp(100, 30, p); b = lerp(10, 5, p);
+                    a = f.life * 0.7;
+                } else {
+                    // Tip: dark red, fading
+                    const p = (t - 0.75) / 0.25;
+                    r = lerp(180, 80, p); g = lerp(30, 10, p); b = 5;
+                    a = f.life * 0.5;
+                }
+
+                const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r);
+                grad.addColorStop(0, `rgba(${r},${g},${b},${a})`);
+                grad.addColorStop(0.6, `rgba(${r},${g * 0.6},${b},${a * 0.5})`);
+                grad.addColorStop(1, `rgba(${r * 0.5},${g * 0.2},0,0)`);
+
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+            }
+        }
+
+        /* ── Embers ──────────────────────────── */
+        const embers = [];
+        const MAX_EMBERS = 60;
+
+        function spawnEmber() {
+            const { floorY, cx, fw } = getHearth();
+            embers.push({
+                x: cx + rand(-fw * 0.3, fw * 0.3),
+                y: floorY - rand(30, 120),
+                vx: rand(-0.8, 0.8),
+                vy: rand(-1.2, -3),
+                r: rand(1.5, 3.5),
+                life: 1,
+                decay: rand(0.003, 0.012),
+                flicker: rand(0.5, 1),
+            });
+        }
+
+        function updateEmbers() {
+            for (let i = embers.length - 1; i >= 0; i--) {
+                const e = embers[i];
+                e.x += e.vx + Math.sin(Date.now() * 0.002 + i) * 0.3;
+                e.y += e.vy;
+                e.vy *= 0.997;
+                e.life -= e.decay;
+                if (e.life <= 0) embers.splice(i, 1);
+            }
+        }
+
+        function drawEmbers() {
+            for (const e of embers) {
+                const flick = 0.5 + Math.sin(Date.now() * 0.01 * e.flicker) * 0.5;
+                const a = e.life * flick;
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255,${Math.floor(180 * e.life)},30,${a})`;
+                ctx.shadowColor = `rgba(255,150,0,${a * 0.8})`;
+                ctx.shadowBlur = 12;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        /* ── Smoke ───────────────────────────── */
+        const smokes = [];
+        const MAX_SMOKE = 30;
+
+        function spawnSmoke() {
+            const { floorY, cx } = getHearth();
+            smokes.push({
+                x: cx + rand(-40, 40),
+                y: floorY - rand(180, 260),
+                vx: rand(-0.3, 0.3),
+                vy: rand(-0.6, -1.5),
+                r: rand(20, 50),
+                life: 1,
+                decay: rand(0.003, 0.008),
+            });
+        }
+
+        function updateSmoke() {
+            for (let i = smokes.length - 1; i >= 0; i--) {
+                const s = smokes[i];
+                s.x += s.vx + Math.sin(Date.now() * 0.0005 + i) * 0.2;
+                s.y += s.vy;
+                s.r += 0.3;
+                s.life -= s.decay;
+                if (s.life <= 0) smokes.splice(i, 1);
+            }
+        }
+
+        function drawSmoke() {
+            for (const s of smokes) {
+                const a = s.life * 0.06;
+                const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r);
+                grad.addColorStop(0, `rgba(100,90,80,${a})`);
+                grad.addColorStop(1, `rgba(60,55,50,0)`);
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+            }
+        }
+
+        /* ── Logs / Hearth Drawing ───────────── */
+        function drawHearth() {
+            const { floorY, cx, fw } = getHearth();
+
+            // Stone floor / base platform
+            const baseH = H * 0.18;
+            const baseGrad = ctx.createLinearGradient(0, floorY, 0, H);
+            baseGrad.addColorStop(0, '#1a1410');
+            baseGrad.addColorStop(0.3, '#0f0c08');
+            baseGrad.addColorStop(1, '#050302');
+            ctx.fillStyle = baseGrad;
+            ctx.fillRect(0, floorY, W, baseH);
+
+            // Subtle stone texture lines
+            ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 8; i++) {
+                const y = floorY + i * (baseH / 8);
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(W, y);
+                ctx.stroke();
+            }
+
+            // Logs
+            drawLog(cx - fw * 0.22, floorY - 10, fw * 0.6, 38, -4);
+            drawLog(cx + fw * 0.08, floorY - 15, fw * 0.55, 34, 6);
+            drawLog(cx - fw * 0.05, floorY - 38, fw * 0.4, 30, -2);
+
+            // Glowing coals under the logs
+            drawCoals(cx, floorY, fw);
+        }
+
+        function drawLog(x, y, w, h, angle) {
+            ctx.save();
+            ctx.translate(x + w / 2, y);
+            ctx.rotate(angle * Math.PI / 180);
+
+            // Main log body
+            const logGrad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+            logGrad.addColorStop(0, '#1e1208');
+            logGrad.addColorStop(0.3, '#2a1a0e');
+            logGrad.addColorStop(0.7, '#1a0f06');
+            logGrad.addColorStop(1, '#0d0804');
+
+            ctx.beginPath();
+            ctx.roundRect(-w / 2, -h / 2, w, h, h / 2);
+            ctx.fillStyle = logGrad;
+            ctx.fill();
+
+            // Bark texture
+            ctx.strokeStyle = 'rgba(80,50,20,0.15)';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < 6; i++) {
+                const lx = -w / 2 + (w / 7) * (i + 1);
+                ctx.beginPath();
+                ctx.moveTo(lx, -h / 2 + 4);
+                ctx.lineTo(lx + rand(-3, 3), h / 2 - 4);
+                ctx.stroke();
+            }
+
+            // Hot glow on underside
+            const glowGrad = ctx.createLinearGradient(0, 0, 0, h / 2 + 10);
+            glowGrad.addColorStop(0, 'rgba(255,80,0,0)');
+            glowGrad.addColorStop(1, 'rgba(255,60,0,0.12)');
+            ctx.beginPath();
+            ctx.roundRect(-w / 2, -h / 2, w, h, h / 2);
+            ctx.fillStyle = glowGrad;
+            ctx.fill();
+
+            // Log end circles
+            ctx.beginPath();
+            ctx.ellipse(-w / 2, 0, h / 2.2, h / 2, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#150b04';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(60,35,15,0.3)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Growth rings on log end
+            for (let r = 3; r < h / 2.5; r += 4) {
+                ctx.beginPath();
+                ctx.ellipse(-w / 2, 0, r, r * 0.9, 0, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(80,50,25,${0.08 + r * 0.005})`;
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function drawCoals(cx, floorY, fw) {
+            const coalCount = 20;
+            for (let i = 0; i < coalCount; i++) {
+                const x = cx + rand(-fw * 0.25, fw * 0.25);
+                const y = floorY - rand(-5, 20);
+                const r = rand(4, 14);
+                const pulse = 0.5 + Math.sin(Date.now() * 0.003 + i * 2.5) * 0.5;
+                const brightness = 0.3 + pulse * 0.7;
+
+                const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+                grad.addColorStop(0, `rgba(255,${Math.floor(80 * brightness)},${Math.floor(10 * brightness)},${0.6 * brightness})`);
+                grad.addColorStop(0.5, `rgba(200,${Math.floor(40 * brightness)},0,${0.3 * brightness})`);
+                grad.addColorStop(1, 'rgba(40,10,0,0)');
+
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+            }
+        }
+
+        /* ── Ambient Light ───────────────────── */
+        function drawAmbientGlow() {
+            const { floorY, cx, fw } = getHearth();
+            const flicker = 0.55 + Math.sin(Date.now() * 0.008) * 0.08
+                          + Math.sin(Date.now() * 0.013) * 0.05
+                          + Math.sin(Date.now() * 0.021) * 0.04;
+
+            // Main warm glow from fire
+            const glow = ctx.createRadialGradient(cx, floorY - 60, 20, cx, floorY - 60, H * 0.8);
+            glow.addColorStop(0, `rgba(255,120,20,${0.12 * flicker})`);
+            glow.addColorStop(0.3, `rgba(200,60,10,${0.06 * flicker})`);
+            glow.addColorStop(0.6, `rgba(100,20,0,${0.03 * flicker})`);
+            glow.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+
+            // Floor reflection
+            const floorGlow = ctx.createRadialGradient(cx, floorY + 20, 10, cx, floorY + 20, fw * 1.5);
+            floorGlow.addColorStop(0, `rgba(255,100,20,${0.15 * flicker})`);
+            floorGlow.addColorStop(0.5, `rgba(150,40,0,${0.05 * flicker})`);
+            floorGlow.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = floorGlow;
+            ctx.fillRect(0, floorY, W, H - floorY);
+        }
+
+        /* ── Background ──────────────────────── */
+        function drawBackground() {
+            // Deep dark gradient background
+            const bg = ctx.createRadialGradient(W / 2, H * 0.7, 50, W / 2, H * 0.5, H);
+            bg.addColorStop(0, '#0a0604');
+            bg.addColorStop(0.5, '#030201');
+            bg.addColorStop(1, '#000000');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, W, H);
+
+            // Subtle vignette
+            const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.9);
+            vig.addColorStop(0, 'rgba(0,0,0,0)');
+            vig.addColorStop(1, 'rgba(0,0,0,0.5)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+        }
+
+        /* ── Main Loop ───────────────────────── */
+        let frameCount = 0;
+
+        function loop() {
+            frameCount++;
+            ctx.clearRect(0, 0, W, H);
+
+            drawBackground();
+
+            // Spawn particles
+            if (flames.length < MAX_FLAMES) {
+                for (let i = 0; i < 4; i++) spawnFlame();
+            }
+            if (embers.length < MAX_EMBERS && frameCount % 3 === 0) spawnEmber();
+            if (smokes.length < MAX_SMOKE && frameCount % 12 === 0) spawnSmoke();
+
+            // Update
+            updateSmoke();
+            updateFlames();
+            updateEmbers();
+
+            // Draw: back to front
+            drawSmoke();
+            drawHearth();
+
+            // Additive blending for fire
+            ctx.globalCompositeOperation = 'lighter';
+            drawFlames();
+            drawEmbers();
+            ctx.globalCompositeOperation = 'source-over';
+
+            drawAmbientGlow();
+
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    })();
+    </script>
+</body>
+</html>
