@@ -32,54 +32,100 @@
             z-index: 1;
         }
 
-        /* --- Visual Hierarchy --- */
-        #slide-viewport {
-            position: fixed; inset: 0;
-            z-index: 10;
-            display: flex; align-items: center; justify-content: center;
-            pointer-events: none;
+        /* --- On/Off Controls --- */
+        .fire-controls {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 100;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        body:hover .fire-controls { opacity: 1; }
+
+        .fire-toggle {
+            position: relative;
+            width: 70px;
+            height: 36px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        .fire-toggle.active {
+            background: rgba(255, 100, 0, 0.4);
+            border-color: var(--fire-bright);
+            box-shadow: 0 0 20px rgba(255, 80, 0, 0.3);
+        }
+        .fire-toggle::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 28px;
+            height: 28px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.3s, background 0.3s;
+        }
+        .fire-toggle.active::after {
+            transform: translateX(34px);
+            background: var(--fire-bright);
+            box-shadow: 0 0 10px var(--fire-glow);
         }
 
-        .slide {
-            position: absolute; inset: 0;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            text-align: center; opacity: 0;
-            transition: opacity 1.5s ease-in-out;
-            padding: 5rem;
-        }
-        .slide.active { opacity: 1; }
-
-        .premium-title {
-            font-family: 'Playfair Display', serif;
-            font-size: clamp(6.5rem, 16vw, 15rem);
-            font-weight: 900;
-            line-height: 0.9;
-            margin-bottom: 2rem;
+        .fire-label {
+            font-size: 0.85rem;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: -0.02em;
-            color: #fff;
-            text-shadow: 
-                0 0 20px rgba(255, 80, 0, 0.8),
-                0 0 40px rgba(255, 40, 0, 0.4),
-                0 10px 30px rgba(0,0,0,0.8);
-            animation: flame-flicker 3s infinite alternate;
+            letter-spacing: 2px;
+            color: rgba(255,200,150,0.6);
+            text-shadow: 0 2px 5px rgba(0,0,0,0.8);
         }
 
-        @keyframes flame-flicker {
-            0% { text-shadow: 0 0 20px rgba(255, 80, 0, 0.8), 0 0 40px rgba(255, 40, 0, 0.4); transform: scale(1); }
-            50% { text-shadow: 0 0 30px rgba(255, 120, 0, 1), 0 0 60px rgba(255, 60, 0, 0.6); transform: scale(1.01); }
-            100% { text-shadow: 0 0 25px rgba(255, 80, 0, 0.9), 0 0 50px rgba(255, 40, 0, 0.5); transform: scale(0.99); }
+        .intensity-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 20px;
         }
-
-        .premium-description {
-            font-size: clamp(1.2rem, 2.5vw, 2.5rem);
-            max-width: 1000px;
+        .intensity-control input[type="range"] {
+            -webkit-appearance: none;
+            width: 120px;
+            height: 6px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+            outline: none;
+        }
+        .intensity-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--fire-bright);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--fire-glow);
+        }
+        .intensity-label {
+            font-size: 0.7rem;
             font-weight: 600;
-            opacity: 0.9;
-            line-height: 1.4;
-            color: #ffccaa;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+            color: rgba(255,200,150,0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- Status Badge --- */
+        .status-badge {
+            position: fixed; top: 2rem; left: 2rem;
+            color: rgba(255, 200, 150, 0.2);
+            font-size: 0.75rem; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 4px;
+            z-index: 50;
         }
 
         /* --- Progress Bar --- */
@@ -90,36 +136,50 @@
             z-index: 100; transition: width 0.1s linear;
         }
 
-        .status-badge {
-            position: fixed; top: 2rem; left: 2rem;
-            color: rgba(255, 200, 150, 0.2);
-            font-size: 0.75rem; font-weight: 800;
-            text-transform: uppercase; letter-spacing: 4px;
-            z-index: 50;
-        }
-
-        /* Nav Hub */
+        /* --- Nav Hub --- */
         .nav-hub { 
             position: fixed; bottom: 0; left: 0; right: 0; 
-            background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
-            border-top: 1px solid var(--border); padding: 10px; 
-            display: flex; justify-content: center; gap: 20px; 
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+            border-top: 1px solid var(--border); padding: 12px 20px; 
+            display: flex; justify-content: center; align-items: center; gap: 20px; 
             z-index: 5000; transform: translateY(100%); transition: 0.3s;
             pointer-events: auto;
         }
         body:hover .nav-hub { transform: translateY(0); }
-        .nav-link { color: #888; text-decoration: none; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+        .nav-link { 
+            color: #888; text-decoration: none; font-size: 0.8rem; 
+            font-weight: 700; text-transform: uppercase; 
+            transition: color 0.2s;
+        }
         .nav-link:hover { color: #ff6a00; }
+        .nav-link.active { color: #ff6a00; }
+        .nav-sep { color: #333; font-size: 0.6rem; }
     </style>
 </head>
 <body>
     <canvas id="fireplace"></canvas>
 
+    <!-- On/Off Controls (hover to reveal) -->
+    <div class="fire-controls">
+        <span class="fire-label">Fireplace</span>
+        <div class="fire-toggle active" id="fire-toggle" onclick="toggleFire()"></div>
+        <div class="intensity-control">
+            <span class="intensity-label">Intensity</span>
+            <input type="range" min="50" max="800" value="400" id="fire-intensity" oninput="setIntensity(this.value)">
+        </div>
+    </div>
+
+    <!-- Navigation Hub -->
     <nav class="nav-hub">
-        <a href="index.html" class="nav-link">🔥 Fireplace</a>
-        <a href="../_ct-MATRIX/index.html" class="nav-link">🏠 Matrix Hub</a>
+        <a href="../_ct-MATRIX/index.html" class="nav-link">📺 Display</a>
+        <a href="../_ct-MATRIX/masteradmin.html" class="nav-link">🛠 Admin</a>
+        <span class="nav-sep">|</span>
         <a href="../_ct-MOM/index.html" class="nav-link">🌸 MOM</a>
         <a href="../_ct-MMR/index.html" class="nav-link">🥩 MMR</a>
+        <a href="../_ct-ACE/index.html" class="nav-link">🃏 ACE</a>
+        <a href="../_ct-WEA/index.html" class="nav-link">🌦 WEA</a>
+        <a href="index.html" class="nav-link active">🔥 FIR</a>
+        <a href="../_ct-NIM/index.html" class="nav-link">🎨 NIM</a>
     </nav>
 
     <script>
@@ -127,6 +187,8 @@
         const canvas = document.getElementById('fireplace');
         const ctx = canvas.getContext('2d');
         let W, H;
+        let fireActive = true;
+        let maxFlames = 400;
 
         function resize() {
             W = canvas.width = window.innerWidth;
@@ -138,7 +200,6 @@
         /* ── Realistic Fire Engine ────────────────── */
         const rand = (min, max) => Math.random() * (max - min) + min;
         const flames = [];
-        const MAX_FLAMES = 400;
 
         function spawnFlame() {
             const floorY = H * 0.92;
@@ -152,7 +213,7 @@
                 r: rand(20, 60),
                 life: 1,
                 decay: rand(0.003, 0.01),
-                stretch: rand(1.5, 2.5) // Vertical stretching
+                stretch: rand(1.5, 2.5)
             });
         }
 
@@ -165,8 +226,10 @@
             ctx.fillStyle = '#0a0502';
             ctx.fillRect(0, H * 0.9, W, H * 0.1);
 
-            if (flames.length < MAX_FLAMES) {
-                for(let i=0; i<4; i++) spawnFlame();
+            if (fireActive) {
+                if (flames.length < maxFlames) {
+                    for(let i=0; i<4; i++) spawnFlame();
+                }
             }
             
             ctx.globalCompositeOperation = 'lighter';
@@ -180,7 +243,6 @@
                 if (f.life <= 0 || f.r < 1) { flames.splice(i, 1); continue; }
 
                 const alpha = Math.pow(f.life, 2) * 0.5;
-                const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r);
                 
                 let color;
                 if (f.life > 0.7) color = `rgba(255, 220, 100, ${alpha})`;
@@ -206,6 +268,17 @@
             requestAnimationFrame(loop);
         }
         loop();
+
+        // --- Controls ---
+        window.toggleFire = function() {
+            fireActive = !fireActive;
+            const toggle = document.getElementById('fire-toggle');
+            toggle.classList.toggle('active', fireActive);
+        };
+
+        window.setIntensity = function(val) {
+            maxFlames = parseInt(val);
+        };
     })();
     </script>
 
