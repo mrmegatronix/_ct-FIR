@@ -49,104 +49,11 @@
             pointer-events: none;
         }
 
-        /* --- On/Off Controls --- */
-        .fire-controls {
-            position: fixed;
-            top: 2rem;
-            right: 2rem;
-            z-index: 100;
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            background: rgba(0,0,0,0.4);
-            padding: 1rem;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-        }
-        body:hover .fire-controls { opacity: 1; }
+        /* UI Controls Removed */
 
-        .fire-toggle {
-            position: relative;
-            width: 70px;
-            height: 36px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid var(--border);
-            border-radius: 50px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        .fire-toggle.active {
-            background: rgba(255, 100, 0, 0.4);
-            border-color: var(--fire-bright);
-            box-shadow: 0 0 20px rgba(255, 80, 0, 0.3);
-        }
-        .fire-toggle::after {
-            content: '';
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 28px;
-            height: 28px;
-            background: #fff;
-            border-radius: 50%;
-            transition: transform 0.3s, background 0.3s;
-        }
-        .fire-toggle.active::after {
-            transform: translateX(34px);
-            background: var(--fire-bright);
-            box-shadow: 0 0 10px var(--fire-glow);
-        }
+        /* Intensity Control Removed */
 
-        .fire-label {
-            font-size: 0.85rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: rgba(255,200,150,0.6);
-            text-shadow: 0 2px 5px rgba(0,0,0,0.8);
-        }
-
-        .intensity-control {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-left: 20px;
-        }
-        .intensity-control input[type="range"] {
-            -webkit-appearance: none;
-            width: 120px;
-            height: 6px;
-            background: rgba(255,255,255,0.15);
-            border-radius: 10px;
-            outline: none;
-        }
-        .intensity-control input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            background: var(--fire-bright);
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 0 10px var(--fire-glow);
-        }
-        .intensity-label {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: rgba(255,200,150,0.5);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* --- Status Badge --- */
-        .status-badge {
-            position: fixed; top: 2rem; left: 2rem;
-            color: rgba(255, 200, 150, 0.2);
-            font-size: 0.75rem; font-weight: 800;
-            text-transform: uppercase; letter-spacing: 4px;
-            z-index: 50;
-        }
+        /* Status Badge Removed */
 
         /* --- Nav Hub --- */
         /* Removed nav-hub to prevent display overlap */
@@ -167,42 +74,16 @@
 
     <div class="ambient-glow"></div>
 
-    <!-- On/Off Controls (hover to reveal) -->
-    <div class="fire-controls">
-        <span class="fire-label">Fireplace</span>
-        <div class="fire-toggle active" id="fire-toggle" onclick="toggleFire()"></div>
-        <div class="intensity-control">
-            <span class="intensity-label">Brightness</span>
-            <input type="range" min="20" max="150" value="100" id="fire-intensity" oninput="setIntensity(this.value)">
-        </div>
-    </div>
+    <!-- Controls Removed for clean loop -->
 
 
     <script>
         const video = document.getElementById('fire-video');
-        const toggle = document.getElementById('fire-toggle');
 
-        function toggleFire() {
-            if (video.paused) {
-                video.play();
-                toggle.classList.add('active');
-                video.style.opacity = '1';
-            } else {
-                video.pause();
-                toggle.classList.remove('active');
-                video.style.opacity = '0.2';
-            }
-        }
-
-        function setIntensity(val) {
-            // Apply brightness and contrast based on slider
-            const brightness = val / 100;
-            const contrast = 0.8 + (val / 500); // Subtle contrast adjustment
-            video.style.filter = `brightness(${brightness}) contrast(${contrast})`;
-        }
-
-        // Initialize
-        setIntensity(100);
+        // Ensure video plays and loops seamlessly
+        window.onload = () => {
+            video.play().catch(e => console.log('Autoplay blocked:', e));
+        };
     </script>
 </body>
 </html>
