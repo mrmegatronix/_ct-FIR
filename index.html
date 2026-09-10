@@ -84,6 +84,42 @@
         window.onload = () => {
             video.play().catch(e => console.log('Autoplay blocked:', e));
         };
+
+        window.addEventListener('keydown', (e) => {
+            const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+            if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select' || document.activeElement?.isContentEditable) return;
+
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'SKIP_MODULE' }, '*');
+                }
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (video) video.currentTime = 0;
+            } else if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+                if (video) {
+                    if (video.paused) video.play().catch(() => {});
+                    else video.pause();
+                }
+            } else if (e.key === 'a' || e.key === 'A') {
+                e.preventDefault();
+                window.open('admin.html', '_blank');
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                window.open('remote.html', '_blank');
+            }
+        });
+
+        window.addEventListener('message', (e) => {
+            if (!e.data) return;
+            if (e.data.type === 'SKIP_MODULE') {
+                if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'SKIP_MODULE' }, '*');
+            } else if (e.data.type === 'GOTO_FIRST') {
+                if (video) video.currentTime = 0;
+            }
+        });
     </script>
 </body>
 </html>
